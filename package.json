@@ -5,6 +5,7 @@
   "main": "gemini-chat-api.js",
   "type": "module",
   "scripts": {
+    "start": "node gemini-chat-api.js",
     "dev": "node --watch gemini-chat-api.js"
   },
   "author": "",
