@@ -2,11 +2,10 @@
   "name": "genai-gemini-test",
   "version": "0.0.1",
   "description": "",
-  "main": "gemini-chat-api.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node gemini-chat-api.js",
-    "dev": "node --watch gemini-chat-api.js"
+    "dev": "node --watch server.js"
   },
   "author": "",
   "license": "ISC",
