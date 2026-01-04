@@ -58,11 +58,14 @@ server.post("/api/chat", async (req, res) => {
 server.post("/api/generate", async (req, res) => {
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-3-flash-preview",
             contents: req.body.contents[0].parts.text,
             config: {
+                thinkingConfig: {
+                    thinkingLevel: "medium",
+                },
                 maxOutputTokens: 1000,
-                temperature: 0.1,
+                temperature: 1.0,
                 systemInstruction: process.env.SYSTEM_PROMPT,
             },
         });
