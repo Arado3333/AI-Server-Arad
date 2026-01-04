@@ -64,7 +64,7 @@ server.post("/api/generate", async (req, res) => {
                 thinkingConfig: {
                     thinkingLevel: "medium",
                 },
-                maxOutputTokens: 1000,
+                maxOutputTokens: 2500,
                 temperature: 1.0,
                 systemInstruction: process.env.SYSTEM_PROMPT,
             },
