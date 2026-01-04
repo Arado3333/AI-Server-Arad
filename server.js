@@ -62,7 +62,7 @@ server.post("/api/generate", async (req, res) => {
             contents: req.body.contents[0].parts.text,
             config: {
                 thinkingConfig: {
-                    thinkingLevel: "medium",
+                    thinkingLevel: "low",
                 },
                 maxOutputTokens: 2500,
                 temperature: 1.0,
