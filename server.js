@@ -77,6 +77,31 @@ server.post("/api/generate", async (req, res) => {
     }
 });
 
+/* Serves MapBox travel app */
+server.post("/api/travelapp/generate", async (req, res) => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: req.body.contents[0].parts.text,
+            config: {
+                tools: [{googleSearch: {}}],
+                thinkingConfig: {
+                    thinkingLevel: "low",
+                },
+                maxOutputTokens: 3500,
+                temperature: 0.4,
+                systemInstruction: process.env.GEMINI_ENRICHMENT_SYSTEM_INSTRUCTION,
+            },
+        });
+        let text = response.text;
+        console.log(text);
+        
+        res.status(200).send(text);
+    } catch (error) {
+        res.status(500).json({ error: "Error sending message to gemini" });
+    }
+});
+
 // Gemini API endpoints - Text with Image
 server.post("/api/chat/with-image", writeToSystem, async (req, res) => {
     console.log("Communication with Gemini API");
