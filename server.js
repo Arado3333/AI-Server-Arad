@@ -127,7 +127,7 @@ server.post("/api/travelapp/routes", async (req, res) => {
       console.log(text);
       console.log(response.candidates[0].groundingMetadata.webSearchQueries);
   
-      res.status(200).send(text);
+      res.status(200).json(text);
     } catch (error) {
       res.status(500).json({ error: "Error sending message to gemini" });
     }
