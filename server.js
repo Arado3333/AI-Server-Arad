@@ -112,7 +112,7 @@ server.post("/api/travelapp/routes", async (req, res) => {
   
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
-        contents: req.body.contents[0].parts.text,
+        contents: req.body.contents[0].parts[0].text,
         config: {
           thinkingConfig: {
             thinkingLevel: "low",
