@@ -5,9 +5,10 @@ import cors from "cors";
 import "dotenv/config";
 import { writeToSystem } from "./middlewares/writeToSystem.js";
 import {
-    GoogleGenAI,
-    createUserContent,
-    createPartFromUri,
+  GoogleGenAI,
+  createUserContent,
+  createPartFromUri,
+  DynamicRetrievalConfigMode,
 } from "@google/genai";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
@@ -15,10 +16,10 @@ import helmet from "helmet";
 const server = express();
 const PORT = process.env.PORT || 3000;
 const limiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 60 minutes
-    limit: 50, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-    standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+  windowMs: 60 * 60 * 1000, // 60 minutes
+  limit: 50, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
 });
 
 server.use(cors());
@@ -31,102 +32,133 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Gemini API endpoints - Text Chat
 server.post("/api/chat", async (req, res) => {
-    try {
-        let chat = ai.chats.create({
-            model: req.body.model,
-            history: req.body.history,
-            config: {
-                temperature: 0.5,
-                maxOutputTokens: 1200,
-                systemInstruction: req.body.systemInstruction,
-            },
-        });
+  try {
+    let chat = ai.chats.create({
+      model: req.body.model,
+      history: req.body.history,
+      config: {
+        temperature: 0.5,
+        maxOutputTokens: 1200,
+        systemInstruction: req.body.systemInstruction,
+      },
+    });
 
-        let response = await chat.sendMessage({
-            message: req.body.message,
-        });
-        res.status(200).json({
-            role: "model",
-            parts: [{ text: response.text }],
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Error sending message to gemini" });
-        console.log(error);
-    }
+    let response = await chat.sendMessage({
+      message: req.body.message,
+    });
+    res.status(200).json({
+      role: "model",
+      parts: [{ text: response.text }],
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error sending message to gemini" });
+    console.log(error);
+  }
 });
 
 server.post("/api/generate", async (req, res) => {
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: req.body.contents[0].parts.text,
-            config: {
-                thinkingConfig: {
-                    thinkingLevel: "low",
-                },
-                maxOutputTokens: 3500,
-                temperature: 0.7,
-                systemInstruction: process.env.SYSTEM_PROMPT,
-            },
-        });
-        let text = response.text;
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: req.body.contents[0].parts.text,
+      config: {
+        thinkingConfig: {
+          thinkingLevel: "low",
+        },
+        maxOutputTokens: 3500,
+        temperature: 0.7,
+        systemInstruction: process.env.SYSTEM_PROMPT,
+      },
+    });
+    let text = response.text;
 
-        res.status(200).send(text);
-    } catch (error) {
-        res.status(500).json({ error: "Error sending message to gemini" });
-    }
+    res.status(200).send(text);
+  } catch (error) {
+    res.status(500).json({ error: "Error sending message to gemini" });
+  }
 });
 
 /* Serves MapBox travel app */
 server.post("/api/travelapp/generate", async (req, res) => {
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: req.body.contents[0].parts.text,
-            config: {
-                tools: [{googleSearch: {}}],
-                thinkingConfig: {
-                    thinkingLevel: "low",
-                },
-                maxOutputTokens: 3500,
-                temperature: 0.4,
-                systemInstruction: process.env.GEMINI_ENRICHMENT_SYSTEM_INSTRUCTION,
-            },
-        });
-        let text = response.text;
-        
-        res.status(200).send(text);
-    } catch (error) {
-        res.status(500).json({ error: "Error sending message to gemini" });
-    }
+  try {
+    console.log(req.body.contents[0]);
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite-preview",
+      contents: req.body.contents[0].parts.text,
+      config: {
+        thinkingConfig: {
+          thinkingLevel: "low",
+        },
+        tools: [{ googleSearch: {} }],
+        maxOutputTokens: 3500,
+        temperature: 0.2,
+        systemInstruction: process.env.GEMINI_ENRICHMENT_SYSTEM_INSTRUCTION,
+      },
+    });
+    let text = response.text;
+    console.log(text);
+    console.log(response.candidates[0].groundingMetadata.webSearchQueries);
+
+    res.status(200).send(text);
+  } catch (error) {
+    res.status(500).json({ error: "Error sending message to gemini" });
+  }
 });
+
+server.post("/api/travelapp/routes", async (req, res) => {
+    try {
+      console.log(req.body.contents[0]);
+  
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite-preview",
+        contents: req.body.contents[0].parts.text,
+        config: {
+          thinkingConfig: {
+            thinkingLevel: "low",
+          },
+          tools: [{ googleSearch: {} }],
+          maxOutputTokens: 3500,
+          temperature: 0.3,
+          systemInstruction: process.env.ROUTE_RECOMMENDATION_SYSTEM_INSTRUCTION,
+        },
+      });
+      let text = response.text;
+      console.log(text);
+      console.log(response.candidates[0].groundingMetadata.webSearchQueries);
+  
+      res.status(200).send(text);
+    } catch (error) {
+      res.status(500).json({ error: "Error sending message to gemini" });
+    }
+  });
 
 // Gemini API endpoints - Text with Image
 server.post("/api/chat/with-image", writeToSystem, async (req, res) => {
-    console.log("Communication with Gemini API");
+  console.log("Communication with Gemini API");
 
-    //Image upload
-    try {
-        const myfile = await ai.files.upload({
-            file: "./images/tempImg.jpeg",
-            config: { mimeType: "image/jpeg" },
-        });
+  //Image upload
+  try {
+    const myfile = await ai.files.upload({
+      file: "./images/tempImg.jpeg",
+      config: { mimeType: "image/jpeg" },
+    });
 
-        //gemini response
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: createUserContent([
-                createPartFromUri(myfile.uri, myfile.mimeType),
-                { text: req.body.message },
-            ]),
-        });
-        res.json(response);
-    } catch (error) {
-        res.status(500).json({ error: "Error uploading image" });
-    }
+    //gemini response
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: createUserContent([
+        createPartFromUri(myfile.uri, myfile.mimeType),
+        { text: req.body.message },
+      ]),
+    });
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: "Error uploading image" });
+  }
 });
 
 // Start server
 server.listen(PORT, () => {
-    console.log(`Server is running on port http://localhost:${PORT}`);
+  console.log(`Server is running on port http://localhost:${PORT}`);
 });
