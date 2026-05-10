@@ -94,7 +94,6 @@ server.post("/api/travelapp/generate", async (req, res) => {
             },
         });
         let text = response.text;
-        console.log(text);
         
         res.status(200).send(text);
     } catch (error) {
